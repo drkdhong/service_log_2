@@ -1,10 +1,11 @@
-# app/__init__.py
+# apps/__init__.py
 import logging
 from logging.handlers import RotatingFileHandler   # logging 추가
 from flask import Flask
 from werkzeug.security import generate_password_hash
 from .extensions import db, migrate, login_manager, csrf
 from .config import Config
+from apps.dbmodels import UserType, User
 
 # 전역 변수/인스턴스 초기화 (extensions.py에서 정의)
 def create_app():   # factory 함수
@@ -38,7 +39,11 @@ def create_app():   # factory 함수
         from flask import flash, redirect, url_for, request
         flash('로그인이 필요합니다.', 'warning')
         return redirect(url_for('auth.login', next=request.path))
- # 블루프린트 등록  -- auth 모듈이 없으므로 현재 오류 발생(auth 설치후 오류 없어짐)
+    # 모든 템플릿에 'UserType' 변수를 추가합니다.
+    @app.context_processor
+    def inject_user_type():
+        return {'UserType': UserType}
+    # 블루프린트 등록  -- auth 모듈이 없으므로 현재 오류 발생(auth 설치후 오류 없어짐)
     from .main import main
     from .auth import auth
 
@@ -57,7 +62,7 @@ def create_app():   # factory 함수
             admin_user = User.query.filter_by(username=admin_username).first()
             if not admin_user:
                 hashed_password = generate_password_hash(admin_password)
-                new_admin = User(username=admin_username, email=admin_email, password_hash=hashed_password, is_admin=True)
+                new_admin = User(username=admin_username, email=admin_email, password_hash=hashed_password, user_type=UserType.ADMIN)  # ADMIN 설정. is_admin=True 삭제
                 db.session.add(new_admin)
                 db.session.commit()
                 print(f"관리자 계정 '{admin_username}', '{admin_password}' 이(가) 생성되었습니다.")
